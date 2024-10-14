@@ -16,6 +16,10 @@ class binaryTree {
 	Node* root = nullptr;
 	void insert(Node* newNode);
 	void destroyTree(Node*& deleteRoot);
+	void print(Node* temp, int depth = 0) const;
+	size_t subtreeSize(Node*& subRoot) ;
+	template<typename Func>
+	void doForNode(Node*& currNode, Func func);
 public:
 	typedef void* nodePtr;
 	void copyTree(nodePtr& tree1, nodePtr const tree2);
@@ -23,16 +27,21 @@ public:
 		return root;
 	}
 	binaryTree() = default;
-	binaryTree(const binaryTree<T>& other) {
+	binaryTree(const binaryTree& other) {
 		destroyTree(root);
 		copyTree((nodePtr&)root, (nodePtr)other.root);
+	}
+	binaryTree(binaryTree&& other) noexcept
+	{
+		root = other.root;
+		other.root = nullptr;
 	}
 	binaryTree<T>& operator=(const binaryTree<T>& other) {
 		destroyTree(root);
 		copyTree((nodePtr&)root, (nodePtr)other.root);
 		return *this;
 	};
-	void insert(T data) {
+	void insert(const T data) {
 		Node* newNode = new Node(data);
 		insert(newNode);
 	}
@@ -42,70 +51,14 @@ public:
 			insert(*i);
 		}
 	}
-	void print(nodePtr temp, int depth=0) const {
-		Node* newNode =(Node*) temp;
-		if (!temp) {
-			return;
-		}
-		print(newNode->left, depth+1);
-		for (int i = 0; i < depth; i++) {
-			std::cout<< "<<< ";
-		}
-		std::cout << newNode->data << "\n";
-		print(newNode->right, depth+1);
+	void show() const {
+		print(root);
 	}
-	void remove(T data) {
-		Node* temp = root;
-		Node* parent = nullptr;
-		while (temp &&(temp->data != data)) {
-			parent = temp;
-			if (temp->data > data) {
-				temp = temp->left;
-			}
-			else{
-				temp = temp->right;
-			}
-		}
-		if (!temp) return;
-		if (temp->left && temp->right) {
-			if (!parent) root = temp->right;
-			else if (parent->left == temp) {
-				parent->left = temp->right;
-			}
-			else 
-			{
-				parent->right = temp->right;
-			}
-			insert(temp->left);
-		}
-		else if (!temp->left) {
-			if (!parent) root = temp->right;
-			else if (parent->left == temp) {
-				parent->left = temp->right;
-			}
-			else 
-			{
-				parent->right = temp->right;
-			}
-		}
-		else if (!temp->right) {
-			if (!parent) root = temp->left;
-			else if (parent->left == temp) {
-				parent->left = temp->left;
-			}
-			else 
-			{
-				parent->right = temp->left;
-			}
-		}
-		delete temp;
-		
-	}
-	
-	bool empty() {
+	void remove(T data);
+	bool empty() const {
 		return (bool)(!root);
 	}
-	bool search(T data) {
+	bool search(T data) const {
 		Node* temp = root;
 		while (temp) {
 			if (temp->data == data) return true;
@@ -118,14 +71,12 @@ public:
 		}
 		return false;
 	}
-	//void inOrder(nodePtr& root, std::vector<T>& arr) = default;
-	//{
-		/*Node*& temp = (Node*&)root;
-		if (!temp) return;
-		inOrder((nodePtr&)temp->left,arr);
-		arr.push_back(temp->data);
-		inOrder((nodePtr&)temp->right,arr);
-	}*/
+	void inOrder(nodePtr root, std::vector<T>& arr);
+	size_t size();
+	T findMin() const;
+	T findMax() const;
+	template<typename Func>
+	binaryTree<T>& doForAll(Func func); // (function) or also for lambda ([](){})
 	void clear() {
 		destroyTree(root);
 	}
@@ -180,4 +131,126 @@ void binaryTree<T>::destroyTree(Node*& delRoot) {
 	destroyTree(delRoot->right);
 	delete delRoot;
 	delRoot = nullptr;
+}
+
+template<typename T>
+void binaryTree<T>::print(Node* temp, int depth) const {
+	if (!temp) {
+		return;
+	}
+	print(temp->left, depth + 1);
+	for (int i = 0; i < depth; i++) {
+		std::cout << "<<< ";
+	}
+	std::cout << temp->data << "\n";
+	print(temp->right, depth + 1);
+}
+
+template<typename T>
+void binaryTree<T>::remove(T data) {
+	Node* temp = root;
+	Node* parent = nullptr;
+	while (temp && (temp->data != data)) {
+		parent = temp;
+		if (temp->data > data) {
+			temp = temp->left;
+		}
+		else {
+			temp = temp->right;
+		}
+	}
+	if (!temp) return;
+	if (temp->left && temp->right) {
+		if (!parent) root = temp->right;
+		else if (parent->left == temp) {
+			parent->left = temp->right;
+		}
+		else
+		{
+			parent->right = temp->right;
+		}
+		insert(temp->left);
+	}
+	else if (!temp->left) {
+		if (!parent) root = temp->right;
+		else if (parent->left == temp) {
+			parent->left = temp->right;
+		}
+		else
+		{
+			parent->right = temp->right;
+		}
+	}
+	else if (!temp->right) {
+		if (!parent) root = temp->left;
+		else if (parent->left == temp) {
+			parent->left = temp->left;
+		}
+		else
+		{
+			parent->right = temp->left;
+		}
+	}
+	delete temp;
+
+}
+
+template<typename T>
+void binaryTree<T>::inOrder(nodePtr root, std::vector<T>& arr)
+{
+	Node*& temp = (Node*&)root;
+	if (!temp) return;
+	inOrder((nodePtr&)temp->left, arr);
+	arr.push_back(temp->data);
+	inOrder((nodePtr&)temp->right, arr);
+}
+
+template<class T>
+inline T binaryTree<T>::findMin() const
+{
+	Node* min = root;
+	while (min->left) {
+		min = min->left;
+	}
+	return min->data;
+}
+
+template<class T>
+inline T binaryTree<T>::findMax() const
+{
+	Node* max = root;
+	while (max->right) {
+		max = max->right;
+	}
+	return max->data;
+}
+
+template<typename T>
+size_t binaryTree<T>::subtreeSize(Node*& subRoot) {
+	if (!subRoot) return 0;
+	return subtreeSize(subRoot->left) + 1 + subtreeSize(subRoot->right);
+}
+
+template<class T>
+template<typename Func>
+inline void binaryTree<T>::doForNode(Node*& currNode, Func func)
+{
+	if (!currNode) return;
+	doForNode(currNode->left,func);
+	doForNode(currNode->right,func);
+	func(currNode->data);
+}
+
+template<typename T>
+size_t binaryTree<T>::size()  {
+	return subtreeSize(root);
+}
+
+template<class T>
+template<typename Func>
+inline binaryTree<T>& binaryTree<T>::doForAll(Func func)
+{
+	// (function) or also for lambda ([](){})
+	doForNode(root,func);
+	return *this;
 }
